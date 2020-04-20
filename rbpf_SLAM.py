@@ -5,6 +5,7 @@
 #            ESE 650 Project
 #     Authors: Vishnu Prem & Ravi Teja
 #   Rao-Blackwellized Paricle Filter SLAM
+#             RBPF SLAM Class
 ############################################
 
 

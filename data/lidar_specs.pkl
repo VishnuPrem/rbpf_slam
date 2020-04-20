@@ -1,0 +1,17 @@
+(dp0
+S'range_max'
+p1
+F100.0
+sS'angle_min'
+p2
+F-3.1415927410125732
+sS'range_min'
+p3
+F0.0
+sS'angle_increment'
+p4
+F0.005823155865073204
+sS'angle_max'
+p5
+F3.1415927410125732
+s.
