@@ -25,11 +25,11 @@ class DataLoader():
         
         lidar = pickle.load(open(lidar_path, "rb"))
         odom = pickle.load(open(odom_path, "rb"))
-        lidar_specs = pickle.load(open(specs_path, "rb"))
+        #lidar_specs = pickle.load(open(specs_path, "rb"))
         
         self.lidar_ = lidar
         self.odom_ = odom
-        self.lidar_specs_ =  lidar_specs  
+        #self.lidar_specs_ =  lidar_specs  
         
         self.lidar_['num_data'] = len(self.lidar_['time'])
         self.odom_['num_data'] = len(self.odom_['time'])

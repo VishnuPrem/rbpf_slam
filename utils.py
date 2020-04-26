@@ -5,8 +5,8 @@ Created on Mon Apr 20 02:01:50 2020
 @author: ravit
 """
 import numpy as np
-import numpy.cos as cos
-import numpy.sin as sin
+import math
+from math import cos,sin
 
 def transformation_scans(prev_scan,d_pose):
     """

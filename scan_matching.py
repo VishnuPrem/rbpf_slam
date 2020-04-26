@@ -25,7 +25,7 @@ def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.5):
     
     """
     
-    Flag = False
+    Flag = True
     pos = np.zeros(3)
     d_pose = curr_best_pose - prev_pose 
     iters = 0
