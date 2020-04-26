@@ -15,11 +15,13 @@ class DataLoader():
     '''
     self.lidar_['time'] (time in milliseconds)
     self.lidar_['scan'] (num_data x 1080)
+    self.lidar_['num_data'] 
     
     self.odom_['time'] (time in milliseconds)
     self.odom_['x'] (meters??)
     self.odom_['y']
     self.odom_['theta'] (radians)
+    self.odom_['num_data']
     '''
     def __init__(self, lidar_path, odom_path, specs_path):
         
@@ -44,8 +46,11 @@ def test_data_loader():
     
     data = DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
     
-def clean_data():
     
+    
+#### ONLY FOR CLEANING PICKLED BAG DATA ####
+def clean_data():
+    # converts pickled bag into clean format for loading
     lidar_scan_path = "data/lidar_scan.pkl"
     odom_path = "data/odom.pkl"   
     
