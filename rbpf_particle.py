@@ -65,14 +65,14 @@ class Particle():
         '''
         pass
     
-    def _sample_poses_in_interval(self, scan_match_pose, interval):
+    def _sample_poses_in_interval(self, scan_match_pose, interval):  ## RAVI
         '''
         Samples around scan matched pose
         Returns list of samples
         '''
         pass
     
-    def _compute_new_pose(self, pose_samples):
+    def _compute_new_pose(self, pose_samples):           ##RAVI
         '''
         Computes mean,cov,weight factor from pose_samples
         Samples new_pose from gaussian and appends to trajectory

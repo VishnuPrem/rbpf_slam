@@ -9,7 +9,7 @@ Created on Mon Apr 20 01:29:24 2020
 import numpy as np
 import utils 
 
-def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.5):
+def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.45):
     
     """
     prev_scan: Scan at time "t-1". Shape: (n,2)
@@ -25,26 +25,37 @@ def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.5):
     
     """
     
-    Flag = True
-    pos = np.zeros(3)
-    d_pose = curr_best_pose - prev_pose 
+    Flag = False
+    d_pos_total = np.zeros(3)
+    d_pose = curr_best_pose - prev_pose #determine sign
+    d_pos_total = d_pose
     iters = 0
     
     trans_scan = utils.transformation_scans(prev_scan,d_pose)
+    
+    trans_scan = utils.transformation_scans(trans_scan,curr_best_pose)
+    curr_scan = utils.transformation_scans(curr_scan,curr_best_pose)
     
     Correspondance = get_correspondance(curr_scan,trans_scan)
     
     curr_error = cal_error(curr_scan,trans_scan,Correspondance)
     
     prev_error = 1e8
+    #print('prev_error:',prev_error)
+    #print('curr_error:',curr_error)
+    #print('Correspondence',Correspondance)
+    #print("##################")
     
-    while (curr_error < prev_error or iters < 100):
+    while (curr_error < prev_error and iters < 100):
+        #print('iters:',iters)
+        d_pos_total_prev = d_pos_total
         
         prev_error = curr_error
         
-        d_pose += get_estimate(curr_scan,trans_scan,Correspondance)
+        d_pose = get_estimate(curr_scan,trans_scan,Correspondance)
+        d_pos_total = d_pos_total - d_pose
         
-        trans_scan = utils.transform(trans_scan,d_pose)
+        trans_scan = utils.transformation_scans(trans_scan,d_pose)
         
         Correspondance = get_correspondance(curr_scan,trans_scan)
         
@@ -52,10 +63,15 @@ def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.5):
         
         iters += 1
         
+        #print('prev_error:',prev_error)
+        #print('curr_error:',curr_error)
+        #print(curr_error < prev_error)
+        #print("##################")
+        
     if curr_error < thresh:
         Flag = True
         
-    return Flag,pos
+    return Flag,prev_pose+d_pos_total_prev\
 
 
 def get_correspondance(curr_scan, trans_scan):
@@ -79,7 +95,10 @@ def get_correspondance(curr_scan, trans_scan):
     
     correspondance = np.argmin(dist,axis = 1)
     
-    assert correspondance.shape == x_trans.shape[0]
+    #print(correspondance.shape)
+    #print(x_trans.shape[0])
+    
+    assert correspondance.shape[0] == x_trans.shape[0]
         
     return correspondance
 
@@ -134,12 +153,12 @@ def get_estimate(curr_scan,trans_scan,correspondance):
     assert corres_scan.shape == trans_scan.shape
     
     
-    W = np.dot(curr_scan.T,trans_scan.T)
+    W = np.dot(corres_scan.T,trans_scan)
     u,s,vt = np.linalg.svd(W)
     
     R = np.dot(u,vt)
     d_pose[:2] = curr_mean - np.dot(R,trans_mean)
-    d_pose[2] = np.atan2(R[1,0],R[0,0])
+    d_pose[2] = np.arctan2(R[1,0],R[0,0])
 
       
     return d_pose

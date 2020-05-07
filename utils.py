@@ -82,3 +82,21 @@ def twoDSmartMinus(x2,x1,type='pose'):
     return np.array([[rot_of_u[0,0],rot_of_u[0,1],trans_of_u[0]],\
                      [rot_of_u[1,0],rot_of_u[1,1],trans_of_u[1]],\
                      [0            ,   0         ,   1]])
+def dist_to_xy(scan,angles):
+    """
+    Scan: (1080,) array of distances
+    angles: (1080,) angles of the scan
+    dpose: distance between the frames
+    xy: (1080,2) array of cartisian cordinates
+    """
+    xy = np.zeros((scan.shape[0],2))
+    xy[:,0] = np.cos(angles)*scan
+    xy[:,1] = np.sin(angles)*scan
+    
+     
+    return xy
+    
+    
+    
+    
+    
