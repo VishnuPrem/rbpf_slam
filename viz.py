@@ -5,7 +5,7 @@ Created on Sat Apr 25 21:48:04 2020
 @author: Vishnu Prem
 
 
- Script to vizualise the lidar scan and odometry
+ Script to vizualise the lidar scan and odometry data
  
 '''
 

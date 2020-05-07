@@ -61,7 +61,7 @@ class Particle():
     
     def _scan_matching(self, predicted_pose, search_interval, z):
         '''
-        Performs scan matching and returns true,scan matched pose or false,None
+        Performs scan matching and returns (true,scan matched pose) or (false,None)
         '''
         pass
     

@@ -43,8 +43,15 @@ def test_data_loader():
     odom_path = "data/processed_odom.pkl"
     lidar_specs_path = "data/lidar_specs.pkl"
     
-    data = DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
+    return DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
     
+    
+if __name__ == '__main__':
+    
+    data = test_data_loader()
+
+
+
     
     
 #### ONLY FOR CLEANING PICKLED BAG DATA ####
@@ -116,5 +123,3 @@ def clean_lidar(lidar):
     tot_msec, scan = tot_msec[::50], scan[::50]
     return tot_msec, scan
     
-def data_correspondence():
-    pass
