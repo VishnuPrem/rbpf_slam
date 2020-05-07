@@ -15,12 +15,12 @@ class Particle():
         -initial weight of particles
         
     '''
-    def __init__(self, map_dimension, map_resolution):
+    def __init__(self, map_dimension, map_resolution, num_p):
         
         self._init_map(map_dimension, map_resolution)              
-        self.weight_ = None #inital value???
+        self.weight_ = 1/num_p #inital value???
         self.weight_factor_ = None
-        self.trajectory_ = np.zeros((3,1),dtype=np.float64) #should it just be a list of poses???
+        self.trajectory_ = np.zeros((3,1),dtype=np.float64) 
         
     def _init_map(self, map_dimension=20, map_resolution=0.05):
         '''
@@ -50,6 +50,7 @@ class Particle():
         Updates initial map using lidar scan 'z' at initial pose
         '''
         pass
+        
     
     def _predict(self, control):
         '''

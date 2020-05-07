@@ -17,38 +17,52 @@ class SLAM():
     
     def __init__(self,  mov_cov, num_p = 20, map_resolution = 0.05, map_dimension = 20, Neff_thresh = 0.6):
         
-        self.num_p = num_p
-        self.Neff = 0
-        self.Neff_thresh = Neff_thresh
-        self._init_particles(map_dimension, map_resolution)
+        self.num_p_ = num_p
+        self.Neff_ = 0
+        self.Neff_thresh_ = Neff_thresh
+        self.weights_ = np.ones(num_p)/num_p
         
-        self.particles = []
-        for i in range(self.num_p):
-            self.particles.append(Particle(map_dimension, map_resolution))
+        self.particles_ = []
+        for i in range(self.num_p_):
+            self.particles_.append(Particle(map_dimension, map_resolution, num_p))
         
         lidar_scan_path = "data/processed_lidar.pkl"
         odom_path = "data/processed_odom.pkl"
         lidar_specs_path = "data/lidar_specs.pkl"
-        self.data = DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
+        self.data_ = DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
         
-    def resample(self):
+        
+    def _resample(self):
         pass
     
-    def slam_update(self):
+    def _slam_update(self):
         
-        for p in self.particles:
+        for p in self.particles_:
             pass
         
-        if self.Neff > self.Neff_thresh:
-            self.resample()
+        if self.Neff_ > self.Neff_thresh_:
+            self._resample()
         
+    def _run_slam(self, t0):
+        
+        num_data = self.data_.lidar_['num_data']
+          
+        for t in range(t0, num_data-t0):
+                       
+            if t == t0:
+                for p in self.particles_:
+                    p._build_first_map(self.data_.lidar_['scan'][0])
+                continue               
+                
+                
+            
+        
+            
         
     # def genMap(particle, end_t=None):
         
     #     log_odds      = particle.log_odds_
     #     logodd_thresh = particle.logodd_thresh_
-
-    #     t0             = slam_inc.t0
     #     if end_t is None:
     #         end_t          = slam_inc.num_data_ - 1
     

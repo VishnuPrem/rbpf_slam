@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
-# -*- coding: utf-8 -*-
->>>>>>> ravi
+
 ############################################
 #       University of Pennsylvania
 #            ESE 650 Project
@@ -20,6 +17,15 @@ class DataLoader():
     self.lidar_['scan'] (num_data x 1080)
     self.lidar_['num_data'] 
     
+    self.lidar_specs_ :
+    {
+        'range_max': 100.0,
+        'angle_min': -3.1415927410125732,
+        'range_min': 0.0,
+        'angle_increment': 0.005823155865073204,
+        'angle_max': 3.1415927410125732
+    }
+    
     self.odom_['time'] (time in milliseconds)
     self.odom_['x'] (meters??)
     self.odom_['y']
@@ -33,11 +39,13 @@ class DataLoader():
         lidar_specs = pickle.load(open(specs_path, "rb"))
         
         self.lidar_ = lidar
+        self.lidar_['num_data'] = len(self.lidar_['time'])
+        
         self.odom_ = odom
+        self.odom_['num_data'] = len(self.odom_['time'])
+        
         self.lidar_specs_ =  lidar_specs  
         
-        self.lidar_['num_data'] = len(self.lidar_['time'])
-        self.odom_['num_data'] = len(self.odom_['time'])
         
         
 # create Dataloader instance like this    
@@ -47,7 +55,6 @@ def test_data_loader():
     odom_path = "data/processed_odom.pkl"
     lidar_specs_path = "data/lidar_specs.pkl"
     
-<<<<<<< HEAD
     return DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
     
     
@@ -56,13 +63,6 @@ if __name__ == '__main__':
     data = test_data_loader()
 
 
-
-    
-=======
-    data = DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
-    
-    
->>>>>>> ravi
     
 #### ONLY FOR CLEANING PICKLED BAG DATA ####
 def clean_data():
@@ -133,10 +133,3 @@ def clean_lidar(lidar):
     tot_msec, scan = tot_msec[::50], scan[::50]
     return tot_msec, scan
     
-<<<<<<< HEAD
-=======
-def data_correspondence():
-    pass
-
-
->>>>>>> ravi
