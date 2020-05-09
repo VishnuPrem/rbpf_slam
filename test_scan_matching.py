@@ -57,7 +57,7 @@ true_pos = updated_pos[:,Flags.astype('bool')]
 false_pos = updated_pos[:,np.logical_not(Flags.astype("bool"))]    
 plt.plot(data.odom_['x'], data.odom_['y'])
 plt.plot(updated_pos[0,:],updated_pos[1,:])
-plt.scatter(true_pos[0,:], true_pos[1,:],color = 'green',s = 0.5)
-#plt.scatter(false_pos[0,:], false_pos[1,:],color = 'red',s = 0.5)
+#plt.scatter(true_pos[0,:], true_pos[1,:],color = 'green',s = 0.5)
+plt.scatter(false_pos[0,:], false_pos[1,:],color = 'red',s = 2)
 plt.show()
 print(np.sum(Flags))

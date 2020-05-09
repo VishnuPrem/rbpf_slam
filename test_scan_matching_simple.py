@@ -11,8 +11,7 @@ import rbpf_dataloader as data_loader
 import scan_matching as matching
 import numpy as np
 import utils as utils
-import matplotlib.pyplot as plt
-import tqdm
+
 
 
 lidar_scan_path = "data\processed_lidar.pkl"
@@ -31,27 +30,26 @@ lidar_angles = np.arange(data.lidar_specs_['angle_min'],data.lidar_specs_['angle
 #updated_pos = np.zeros((3,data.lidar_['num_data']))
 Flags = np.zeros((data.lidar_['num_data']))
 Flags[0] = True
-
-odom_index = np.argmin(abs(data.odom_['time'] - data.lidar_['time'][350]))
+index1 = 250
+odom_index = np.argmin(abs(data.odom_['time'] - data.lidar_['time'][index1]))
 prev_odom = np.zeros((3,))
 prev_odom[0] = data.odom_['x'][odom_index]
 prev_odom[1] = data.odom_['y'][odom_index]
 prev_odom[2] = data.odom_['theta'][odom_index]
-prev_scan = data.lidar_['scan'][300]
+prev_scan = data.lidar_['scan'][index1]
 prev_coordinates = utils.dist_to_xy(prev_scan,lidar_angles)
-
-odom_index = np.argmin(abs(data.odom_['time'] - data.lidar_['time'][301]))
+index2 = 251
+odom_index = np.argmin(abs(data.odom_['time'] - data.lidar_['time'][index2]))
 curr_odom = np.zeros((3,))
 curr_odom[0] = data.odom_['x'][odom_index]
 curr_odom[1] = data.odom_['y'][odom_index]
 curr_odom[2] = data.odom_['theta'][odom_index]
-curr_scan = data.lidar_['scan'][301]
+curr_scan = data.lidar_['scan'][index2]
 
 curr_coordinates = utils.dist_to_xy(curr_scan,lidar_angles)
-Flags, updated_pos = matching.Scan_matcher(prev_coordinates, prev_odom, curr_coordinates, curr_odom) 
+Flags, updated_pos = matching.Scan_matcher(curr_coordinates.copy(), curr_odom.copy(), prev_coordinates.copy(), prev_odom.copy()) 
 
-print("updated position",updated_pos)
-print("odom_index",odom_index)
-print("prev position",prev_odom)
-print("curr position",curr_odom)
-#print('error:',error)
+#print("updated position",updated_pos)
+#print("prev position",prev_odom)
+#print("curr position",curr_odom)
+#print('unaltered position:',data.odom_['x'][odom_index],data.odom_['y'][odom_index])

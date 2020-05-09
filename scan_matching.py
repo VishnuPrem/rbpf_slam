@@ -7,11 +7,14 @@ Created on Mon Apr 20 01:29:24 2020
 
 
 import numpy as np
+import matplotlib.pyplot as plt
 import utils 
 
 def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.45):
     
     """
+    Send it in the reverse order.It overlays current_time_steps_map onto prev_time steps scan and then computes inverse
+    trasformation to find updated curr_pose. Keep in mind here prev_scan refers to curr_scan and vice versa.
     prev_scan: Scan at time "t-1". Shape: (n,2)
     prev_pose: Pose of the current particle at previous time step: (3,)
     prev_scan: Scan at time "t". Shape: (n,2)
@@ -31,47 +34,68 @@ def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.45):
     d_pos_total = d_pose
     iters = 0
     
-    trans_scan = utils.transformation_scans(prev_scan,d_pose)
     
-    trans_scan = utils.transformation_scans(trans_scan,curr_best_pose)
+    
     curr_scan = utils.transformation_scans(curr_scan,curr_best_pose)
+    prev_pose_trial = prev_pose.copy()
+    prev_scan = utils.transformation_scans(prev_scan,prev_pose)
+
     
-    Correspondance = get_correspondance(curr_scan,trans_scan)
+
+    trans_scan = utils.transformation_scans(prev_scan,d_pose)
+
+    prev_pose_trial = utils.transformation_scans(prev_pose_trial[:2][None,:],d_pose)
+    #plot_graph(curr_scan,trans_scan)
+
+    Correspondance,_ = get_correspondance(curr_scan,trans_scan)
+    
+    #print('correspondance:',Correspondance)
     
     curr_error = cal_error(curr_scan,trans_scan,Correspondance)
     
     prev_error = 1e8
-    #print('prev_error:',prev_error)
-    #print('curr_error:',curr_error)
-    #print('Correspondence',Correspondance)
-    #print("##################")
-    
+
     while (curr_error < prev_error and iters < 100):
-        #print('iters:',iters)
+
         d_pos_total_prev = d_pos_total
+        prev_iter_pose_trial = prev_pose_trial
         
         prev_error = curr_error
         
-        d_pose = get_estimate(curr_scan,trans_scan,Correspondance)
-        d_pos_total = d_pos_total - d_pose
+        d_pose = get_estimate(curr_scan.copy(),trans_scan.copy(),Correspondance)
+
         
         trans_scan = utils.transformation_scans(trans_scan,d_pose)
-        
-        Correspondance = get_correspondance(curr_scan,trans_scan)
+
+        prev_pose_trial = utils.transformation_scans(prev_pose_trial,d_pose)
+
+        d_pos_total = d_pos_total - d_pose
+
+        #plot_graph(curr_scan,trans_scan,title = str(iters))
+        Correspondance,_ = get_correspondance(curr_scan,trans_scan)
+
         
         curr_error = cal_error(curr_scan,trans_scan,Correspondance)
         
         iters += 1
         
-        #print('prev_error:',prev_error)
-        #print('curr_error:',curr_error)
-        #print(curr_error < prev_error)
-        #print("##################")
+
         
     if curr_error < thresh:
         Flag = True
-        
-    return Flag,prev_pose+d_pos_total_prev\
+    
+    
+    pose = np.zeros((3,))
+    pose[:2] = prev_iter_pose_trial[0,:]
+    pose[2] = (prev_pose + d_pos_total_prev)[2] 
+    #added for reversal
+    d_pose = pose - prev_pose
+    d_pose[2] = -d_pose[2]
+    R = utils.twoDRotation(d_pose[2])
+    d_pose[:2] = -R@d_pose[:2]
+    pose_x = curr_best_pose + d_pose
+    #print(pose_x)
+    return Flag,pose_x
 
 
 def get_correspondance(curr_scan, trans_scan):
@@ -95,12 +119,14 @@ def get_correspondance(curr_scan, trans_scan):
     
     correspondance = np.argmin(dist,axis = 1)
     
+    min_dist = np.amin(dist,axis = 1)
+    
     #print(correspondance.shape)
     #print(x_trans.shape[0])
     
     assert correspondance.shape[0] == x_trans.shape[0]
         
-    return correspondance
+    return correspondance,min_dist
 
 
 def cal_error(curr_scan,trans_scan,Correspondance):
@@ -123,7 +149,7 @@ def cal_error(curr_scan,trans_scan,Correspondance):
     
     error = np.mean(error)
     
-    
+    #print(error)
     
     return error
  
@@ -141,6 +167,7 @@ def get_estimate(curr_scan,trans_scan,correspondance):
 
     """
     d_pose = np.zeros(3) 
+    
     
     curr_mean = np.mean(curr_scan,axis = 0)
     trans_mean = np.mean(trans_scan,axis = 0)
@@ -162,3 +189,27 @@ def get_estimate(curr_scan,trans_scan,correspondance):
 
       
     return d_pose
+
+def plot_graph(curr_scan,trans_scan,title = 'initial'):
+    
+    fig,axs = plt.subplots()
+    axs.scatter(curr_scan[:,0],curr_scan[:,1],label = 'curr-scan',s = 0.5)
+    axs.scatter(trans_scan[:,0],trans_scan[:,1],label = 'trans-scan',s = 0.5)
+    axs.legend()
+    axs.set_title(title)
+
+
+
+def unit_test():
+    
+    prev_scan = np.array([[1,1],[-1,1]],dtype = np.float64)
+    curr_scan = np.array([[1,0],[-1,0]],dtype = np.float64)
+    prev_pose = np.array([0,0,0],dtype = np.float64)
+    curr_best_pose = np.array([0,2,0],dtype = np.float64)
+        
+    Flag, pose = Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.45)
+    print(Flag,pose)
+    
+if __name__ == "__main__":
+    print('in main')
+    unit_test()

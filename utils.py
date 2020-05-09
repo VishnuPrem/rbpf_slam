@@ -8,7 +8,7 @@ import numpy as np
 import math
 from math import cos,sin
 
-def transformation_scans(prev_scan,d_pose):
+def transformation_scans(prev_scan,d_pose,Flag = False):
     """
     
 
@@ -25,6 +25,9 @@ def transformation_scans(prev_scan,d_pose):
          shape: (n,2) 
     """
     R = twoDRotation(d_pose[2])
+    
+    if Flag:
+      print('R:',R)
     
     trans_scan = np.dot(R,prev_scan.T).T + d_pose[:2]
     
