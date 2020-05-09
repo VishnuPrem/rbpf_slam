@@ -14,10 +14,11 @@ from rbpf_particle import Particle
 from rbpf_dataloader import DataLoader
 import matplotlib.pyplot as plt
 import cv2
+import transformations as tf
 
 class SLAM():
     
-    def __init__(self,  mov_cov, num_p = 20, map_resolution = 0.05, map_dimension = 20, Neff_thresh = 0.6):
+    def __init__(self, data_path, mov_cov, num_p = 20, map_resolution = 0.05, map_dimension = 20, Neff_thresh = 0.6):
         
         self.num_p_ = num_p
         self.Neff_ = 0
@@ -29,27 +30,24 @@ class SLAM():
         for i in range(self.num_p_):
             self.particles_.append(Particle(map_dimension, map_resolution, num_p))
         
-        lidar_scan_path = "data/processed_lidar.pkl"
-        odom_path = "data/processed_odom.pkl"
-        lidar_specs_path = "data/lidar_specs.pkl"
-        self.data_ = DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
+        self.data_ = DataLoader(data_path[0], data_path[1], data_path[2])
         
         
     def _resample(self):
         pass
     
-    def _slam_update(self):
-        
+    def _slam_update(self):       
         for p in self.particles_:
-            pass
-        
+            pass     
         if self.Neff_ > self.Neff_thresh_:
             self._resample()
         
     def _run_slam(self, t0, t_end = None):
-        
+        '''
+            Performs SLAM
+        '''
         t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
-          
+                 
         for t in range(t0, t_end):                     
             if t == t0:
                 print("----Building first map----")
@@ -63,12 +61,34 @@ class SLAM():
                 # predict with motion model
                 pred_pose = p._predict(self.data_, t, self.mov_cov_)
                 
+                #### REMEAINING STEPS
+                est_pose = pred_pose
+                ####
                 
+                p._update_map(self.data_, t, est_pose)
                 
+        self._gen_map(p)
+    
+    
+    def _mapping_with_known_poses(self, t0, t_end = None, interval = 1):
+        '''
+            Uses noiseless odom data to generate entire map
+        '''
+        t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
+        p = self.particles_[0]
+        for t in range(t0, t_end, interval):                             
+            odom = self.data_._odom_at_lidar_idx(t)  
+            p._update_map(self.data_, t, odom)
+            if t%50==0:
+                self._gen_map(p)
+            print(t)                
+        self._gen_map(p)
                 
             
     def _gen_map(self, particle):
-        
+        '''
+            Generates map for visualization
+        '''
         log_odds      = particle.log_odds_
         logodd_thresh = particle.logodd_thresh_
         MAP = particle.MAP_

@@ -10,6 +10,7 @@
 import pickle
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import transformations as tf
 
 class DataLoader():
     '''
@@ -61,13 +62,20 @@ class DataLoader():
         odom_idx = np.argmin(np.abs(self.odom_['time'] - lidar_t))
         return np.array([self.odom_['x'][odom_idx], self.odom_['y'][odom_idx], self.odom_['theta'][odom_idx]])
         
-    def _polar_to_cartesian(self, scan):
+    def _polar_to_cartesian(self, scan, pose = None):
         '''
             Converts polar scan to cartisian x,y coordinates
         '''
         scan[scan > self.lidar_max_ ] = self.lidar_max_ 
         lidar_ptx = scan * np.cos(self.lidar_angles_)
         lidar_pty = scan * np.sin(self.lidar_angles_)
+        
+        if pose is not None:
+            T = tf.twoDTransformation(pose[0],pose[1],pose[2])
+            pts = np.vstack((lidar_ptx, lidar_pty, np.ones(lidar_ptx.shape)))
+            trans_pts = T@pts
+            lidar_ptx, lidar_pty, _ = trans_pts
+            
         return lidar_ptx, lidar_pty
     
     def _world_to_map(self, world_x, world_y, MAP):
@@ -138,29 +146,21 @@ def test_data_loader():
     return DataLoader(lidar_scan_path, odom_path, lidar_specs_path)
     
     
-if __name__ == '__main__':
-    
-    d = test_data_loader()
-    res = d.bresenham2D(3,3,10,10)     
-
-    
     
 #### ONLY FOR CLEANING PICKLED BAG DATA ####
 def clean_data():
     # converts pickled bag into clean format for loading
-    lidar_scan_path = "data/lidar_scan.pkl"
+    
+    # lidar_scan_path = "data/lidar_scan.pkl"
+    # lidar = pickle.load(open(lidar_scan_path, "rb"))
+    # lidar_t, lidar_scan = clean_lidar(lidar)
+    # lidar_data = {'time':lidar_t, 'scan':lidar_scan}
+    # pickle.dump( lidar_data, open( "processed_lidar.pkl", "wb" ) )
+    
     odom_path = "data/odom.pkl"   
-    
-    lidar = pickle.load(open(lidar_scan_path, "rb"))
     odom = pickle.load(open(odom_path, "rb"))
-    
-    lidar_t, lidar_scan = clean_lidar(lidar)
     odom_t, odom_x, odom_y, odom_theta = clean_odom(odom)
-    
-    lidar_data = {'time':lidar_t, 'scan':lidar_scan}
     odom_data = {'time':odom_t, 'x':odom_x, 'y':odom_y, 'theta':odom_theta}
-    
-    pickle.dump( lidar_data, open( "processed_lidar.pkl", "wb" ) )
     pickle.dump( odom_data, open( "processed_odom.pkl", "wb" ) )
     print('done')
     
@@ -175,8 +175,8 @@ def clean_odom(odom):
     
     x = np.array(odom['posx'])
     y = np.array(odom['posy'])
-    x = x - x[0]
-    y = y - y[0]
+    # x = x - x[0]
+    # y = y - y[0]
     
     quatz = np.array(odom['quatz'])
     quatw = np.array(odom['quatw'])   
@@ -189,6 +189,11 @@ def clean_odom(odom):
     euler = r.as_euler('zyx', degrees=False)
     
     theta = euler[:,0]
+ 
+    pts = np.vstack((x,y,np.ones(x.shape)))
+    trans_pts = tf.twoDTransformation(-x[0],-y[0],-theta[0])@pts
+    x,y = trans_pts[0],trans_pts[1]
+    print(theta[0])
     theta = theta - theta[0]
     
     angle_range = np.pi
@@ -213,4 +218,11 @@ def clean_lidar(lidar):
     
     tot_msec, scan = tot_msec[::50], scan[::50]
     return tot_msec, scan
+ 
+    
+if __name__ == '__main__':
+    
+    # d = test_data_loader()
+    # res = d.bresenham2D(3,3,10,10)     
+    clean_data()
     

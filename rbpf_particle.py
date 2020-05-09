@@ -53,7 +53,7 @@ class Particle():
         '''
         scan = data_.lidar_['scan'][t]
         obstacle = scan < data_.lidar_max_
-        world_x, world_y = data_._polar_to_cartesian(scan)
+        world_x, world_y = data_._polar_to_cartesian(scan, None)
         map_x, map_y = data_._world_to_map(world_x, world_y, self.MAP_)
         r_map_x, r_map_y = data_._world_to_map(0, 0, self.MAP_)
         
@@ -111,12 +111,28 @@ class Particle():
         Updates weight
         '''
     
-    def _update_map(self, data_, t):
+    def _update_map(self, data_, t, pose):
         '''
-        updates map with lidar scan z for last pose in trajectory
+            Updates map with lidar scan z for last pose in trajectory
 
         '''
-        pass
+        scan = data_.lidar_['scan'][t]
+        obstacle = scan < data_.lidar_max_
+        world_x, world_y = data_._polar_to_cartesian(scan, pose)
+        map_x, map_y = data_._world_to_map(world_x, world_y, self.MAP_)
+        r_map_x, r_map_y = data_._world_to_map(pose[0], pose[1], self.MAP_)
+        
+        for ray_num in range(len(scan)):
+            cells_x, cells_y = data_._bresenham2D(r_map_x, r_map_y, map_x[ray_num], map_y[ray_num], self.MAP_)
+            self.log_odds_[cells_x[:-1], cells_y[:-1]] += self.log_p_false
+            if obstacle[ray_num]:
+                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_true
+            else:
+                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_false
+        self.occu_ = 1 - (1/ (1 + np.exp(self.log_odds_)))
+        self.MAP_['map'] = self.occu_ > self.p_thresh_
+        
+        self.traj_indices_ = np.append(self.traj_indices_, np.array([[r_map_x],[r_map_y]]), 1)
     
     
     
