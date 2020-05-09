@@ -31,6 +31,8 @@ class DataLoader():
     self.odom_['y']
     self.odom_['theta'] (radians)
     self.odom_['num_data']
+    
+    self.lidar_angles_: angles of each ray in self.lidar_['scan'] in radian
     '''
     def __init__(self, lidar_path, odom_path, specs_path):
         
@@ -44,10 +46,88 @@ class DataLoader():
         self.odom_ = odom
         self.odom_['num_data'] = len(self.odom_['time'])
         
-        self.lidar_specs_ =  lidar_specs  
+        angle_min = lidar_specs['angle_min']
+        angle_max = lidar_specs['angle_max']
+        angle_increment = lidar_specs['angle_increment']
         
+        self.lidar_angles_ = np.arange(angle_min, angle_max, angle_increment)
+        self.lidar_max_ = 10
         
+    def _odom_at_lidar_idx(self, idx):
+        '''
+            Return odom data corresponding to time t in lidar data
+        '''
+        lidar_t = self.lidar_['time'][idx]
+        odom_idx = np.argmin(np.abs(self.odom_['time'] - lidar_t))
+        return np.array([self.odom_['x'][odom_idx], self.odom_['y'][odom_idx], self.odom_['theta'][odom_idx]])
         
+    def _polar_to_cartesian(self, scan):
+        '''
+            Converts polar scan to cartisian x,y coordinates
+        '''
+        scan[scan > self.lidar_max_ ] = self.lidar_max_ 
+        lidar_ptx = scan * np.cos(self.lidar_angles_)
+        lidar_pty = scan * np.sin(self.lidar_angles_)
+        return lidar_ptx, lidar_pty
+    
+    def _world_to_map(self, world_x, world_y, MAP):
+        '''
+            Converts x,y from meters to map coods
+        '''
+        map_x = np.ceil((world_x - MAP['xmin']) / MAP['res']).astype(np.int16)-1
+        map_y = np.ceil((world_y - MAP['ymin']) / MAP['res']).astype(np.int16)-1
+        return map_x, map_y
+    
+    
+    def _bresenham2D(self,sx,sy,ex,ey, MAP):
+        
+        sx = int(np.round(sx))
+        sy = int(np.round(sy))
+        ex = int(np.round(ex))
+        ey = int(np.round(ey))
+        dx = abs(ex-sx)
+        dy = abs(ey-sy)
+        steep = abs(dy)>abs(dx)
+        if steep:
+          dx,dy = dy,dx # swap 
+        
+        if dy == 0:
+          q = np.zeros((dx+1,1))
+        else:      
+          arange = np.arange( np.floor(dx/2), -dy*dx+np.floor(dx/2)-1, -dy)  
+          mod = np.mod(arange,dx)
+          diff = np.diff(mod)  
+          great =  np.greater_equal(diff,0) 
+          q = np.append(0, great)
+        
+        if steep:
+          if sy <= ey:
+            y = np.arange(sy,ey+1)
+          else:
+            y = np.arange(sy,ey-1,-1)
+          if sx <= ex:
+            x = sx + np.cumsum(q)
+          else:
+            x = sx - np.cumsum(q)
+        else:
+          if sx <= ex:
+            x = np.arange(sx,ex+1)
+          else:
+            x = np.arange(sx,ex-1,-1)
+          if sy <= ey:
+            y = sy + np.cumsum(q)
+          else:
+            y = sy - np.cumsum(q)
+            
+        x_valid = np.logical_and(x>=0, x<MAP['sizex'])
+        y_valid = np.logical_and(y>=0, y<MAP['sizey'])
+        cell_valid = np.logical_and(x_valid, y_valid)
+        x = x[cell_valid]
+        y = y[cell_valid]
+        
+        return np.vstack((x,y)).astype(int)
+
+       
 # create Dataloader instance like this    
 def test_data_loader():
     
@@ -60,9 +140,10 @@ def test_data_loader():
     
 if __name__ == '__main__':
     
-    data = test_data_loader()
+    d = test_data_loader()
+    res = d.bresenham2D(3,3,10,10)     
 
-
+    
     
 #### ONLY FOR CLEANING PICKLED BAG DATA ####
 def clean_data():

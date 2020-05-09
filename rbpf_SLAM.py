@@ -12,6 +12,8 @@
 import numpy as np
 from rbpf_particle import Particle
 from rbpf_dataloader import DataLoader
+import matplotlib.pyplot as plt
+import cv2
 
 class SLAM():
     
@@ -21,6 +23,7 @@ class SLAM():
         self.Neff_ = 0
         self.Neff_thresh_ = Neff_thresh
         self.weights_ = np.ones(num_p)/num_p
+        self.mov_cov_ = mov_cov
         
         self.particles_ = []
         for i in range(self.num_p_):
@@ -43,35 +46,41 @@ class SLAM():
         if self.Neff_ > self.Neff_thresh_:
             self._resample()
         
-    def _run_slam(self, t0):
+    def _run_slam(self, t0, t_end = None):
         
-        num_data = self.data_.lidar_['num_data']
+        t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
           
-        for t in range(t0, num_data-t0):
-                       
+        for t in range(t0, t_end):                     
             if t == t0:
+                print("----Building first map----")
                 for p in self.particles_:
-                    p._build_first_map(self.data_.lidar_['scan'][0])
-                continue               
+                    p._build_first_map(self.data_, t)
+                    self._gen_map(p)
+                continue
+            
+            for p in self.particles_:
+                
+                # predict with motion model
+                pred_pose = p._predict(self.data_, t, self.mov_cov_)
+                
+                
                 
                 
             
+    def _gen_map(self, particle):
         
-            
+        log_odds      = particle.log_odds_
+        logodd_thresh = particle.logodd_thresh_
+        MAP = particle.MAP_
+        traj = particle.traj_indices_
         
-    # def genMap(particle, end_t=None):
-        
-    #     log_odds      = particle.log_odds_
-    #     logodd_thresh = particle.logodd_thresh_
-    #     if end_t is None:
-    #         end_t          = slam_inc.num_data_ - 1
-    
-    #     MAP_2_display = 255*np.ones((MAP['map'].shape[0],MAP['map'].shape[1],3),dtype=np.uint8)
-    
-    #     wall_indices = np.where(log_odds > logodd_thresh)
-    #     MAP_2_display[list(wall_indices[0]),list(wall_indices[1]),:] = [0,0,0]
-    #     unexplored_indices = np.where(abs(log_odds) < 1e-1)
-    #     MAP_2_display[list(unexplored_indices[0]),list(unexplored_indices[1]),:] = [150,150,150]
-    #     MAP_2_display[best_p_indices[0,t0:end_t], best_p_indices[1,t0:end_t],:] = [70,70,228]#
-        
-    #     return MAP_2_display
+        MAP_2_display = 255*np.ones((MAP['sizex'],MAP['sizey'],3),dtype=np.uint8)
+        wall_indices = np.where(log_odds > logodd_thresh)
+        MAP_2_display[list(wall_indices[0]),list(wall_indices[1]),:] = [0,0,0]
+        unexplored_indices = np.where(abs(log_odds) < 1e-1)
+        MAP_2_display[list(unexplored_indices[0]),list(unexplored_indices[1]),:] = [150,150,150]
+        MAP_2_display[traj[0],traj[1]] = [70,70,228]
+        plt.imshow(MAP_2_display)
+        plt.show()
+        cv2.imwrite('logs/map.png', MAP_2_display)
+        return MAP_2_display
