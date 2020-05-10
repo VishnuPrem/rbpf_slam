@@ -25,11 +25,20 @@ def transformation_scans(prev_scan,d_pose,Flag = False):
          shape: (n,2) 
     """
     R = twoDRotation(d_pose[2])
-    
+    d_pose = d_pose.flatten()
     if Flag:
       print('R:',R)
+      
+    # if prev_scan.shape != (1080,2):
+    #     print(prev_scan.shape)
+    # assert prev_scan.shape == (1080,2)
+    # assert d_pose.shape == (3,)
     
-    trans_scan = np.dot(R,prev_scan.T).T + d_pose[:2]
+    if prev_scan.shape[1]!=2:
+        prev_scan = prev_scan.T
+        
+    trans_scan = np.dot(R,prev_scan.T).T 
+    trans_scan += d_pose[:2]
     
     assert trans_scan.shape == prev_scan.shape    
     

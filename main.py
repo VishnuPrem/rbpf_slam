@@ -29,9 +29,9 @@ p_thresh = 0.5
 Neff_thresh = 0.6
 
 t0 = 0
-t_end = None # timestep to end SLAM
+t_end = 1 # timestep to end SLAM
 
 slam = SLAM(data_path, mov_cov, num_p, map_resolution, map_dimension, Neff_thresh)
-# slam._run_slam(t0, t_end)
+slam._run_slam(t0, t_end)
 
-slam._mapping_with_known_poses(t0,t_end)
+# slam._mapping_with_known_poses(t0,t_end)

@@ -86,7 +86,15 @@ class DataLoader():
         map_y = np.ceil((world_y - MAP['ymin']) / MAP['res']).astype(np.int16)-1
         return map_x, map_y
     
-    
+    def _map_to_world(self, map_x, map_y, MAP):
+        '''
+            Converts x,y from map to world
+        '''
+        world_x = ((map_x + 1) * MAP['res']) + MAP['xmin']
+        world_y = ((map_y + 1) * MAP['res']) + MAP['ymin']
+        return np.vstack((world_x, world_y))
+        
+        
     def _bresenham2D(self,sx,sy,ex,ey, MAP):
         
         sx = int(np.round(sx))

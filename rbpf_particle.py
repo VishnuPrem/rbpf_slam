@@ -6,30 +6,20 @@
 ############################################
 
 import numpy as np
-<<<<<<< HEAD
+
 import utils as utils
 import scan_matching as match
 from math import cos as cos
 from math import sin as sin
 import update_models as models
-
-class Particle():
-    
-    '''
-    Things to consider:
-        -how to represent poses/trajectory, poses are list, trajectory as list of poses? any advantage to making it np array?
-        -initial weight of particles
-        
-    '''
-    def __init__(self, map_dimension, map_resolution, num_p, delta = 0.05, sample_size = 15):
-=======
 import matplotlib.pyplot as plt
 import transformations as tf
+import scan_matching as matching
 
 class Particle():
     
-    def __init__(self, map_dimension, map_resolution, num_p):
->>>>>>> master
+    def __init__(self, map_dimension, map_resolution, num_p, delta = 0.05, sample_size = 15):
+
         
         self._init_map(map_dimension, map_resolution)              
         self.weight_ = 1/num_p #inital value???
@@ -39,8 +29,8 @@ class Particle():
         self.trajectory_ = np.zeros((3,1),dtype=np.float64) 
         self.traj_indices_ = np.zeros((2,1)).astype(int)
         
-        self.log_p_true = np.log(9)
-        self.log_p_false = np.log(1.0/9.0)
+        self.log_p_true_ = np.log(9)
+        self.log_p_false_ = np.log(1.0/9.0)
         self.p_thresh_ = 0.6
         self.logodd_thresh_ = np.log(self.p_thresh_/(1-self.p_thresh_))
     
@@ -79,15 +69,19 @@ class Particle():
         
         for ray_num in range(len(scan)):
             cells_x, cells_y = data_._bresenham2D(r_map_x, r_map_y, map_x[ray_num], map_y[ray_num], self.MAP_)
-            self.log_odds_[cells_x[:-1], cells_y[:-1]] += self.log_p_false
+            self.log_odds_[cells_x[:-1], cells_y[:-1]] += self.log_p_false_
             if obstacle[ray_num]:
-                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_true
+                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_true_
             else:
-                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_false
+                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_false_
         self.occu_ = 1 - (1/ (1 + np.exp(self.log_odds_)))
         self.MAP_['map'] = self.occu_ > self.p_thresh_
         
         self.traj_indices_[0], self.traj_indices_[1] = r_map_x, r_map_y
+        
+        occupied_map = np.where(self.log_odds_ > self.logodd_thresh_)
+        self.occupied_pts_ = data_._map_to_world(occupied_map[0], occupied_map[1], self.MAP_)
+        
         # plt.imshow(self.MAP_['map'])
         # plt.show()
         # plt.imshow(self.occu_)
@@ -105,17 +99,28 @@ class Particle():
         odom_diff = tf.twoDSmartMinus(new_odom, old_odom)     
         noise = np.random.multivariate_normal(np.zeros(3), mov_cov, 1).flatten()
         
-        smart_plus = tf.twoDSmartPlus(old_pose, odom_diff)
-        pred_pose = tf.twoDSmartPlus(smart_plus, noise)
+        pred_pose = tf.twoDSmartPlus(old_pose, odom_diff)
+        pred_with_noise = tf.twoDSmartPlus(pred_pose, noise)
         
-        return pred_pose
+        return pred_pose, pred_with_noise
         
     
-    def _scan_matching(self, predicted_pose, search_interval, z):
+    def _scan_matching(self, data_, t , pred_odom):
         '''
         Performs scan matching and returns (true,scan matched pose) or (false,None)
         '''
-        pass
+        
+        curr_scan = data_.lidar_['scan'][t]
+        prev_scan = data_.lidar_['scan'][t-1]
+        
+        curr_coordinates = utils.dist_to_xy(curr_scan, data_.lidar_angles_)
+        curr_odom = pred_odom
+        prev_coordinates = utils.dist_to_xy(prev_scan, data_.lidar_angles_)
+        prev_odom = self.trajectory_[:,-1]
+        
+        flag, updated_pose = matching.Scan_matcher(curr_coordinates.copy(), curr_odom.copy(), prev_coordinates.copy(), prev_odom.copy())      
+        return flag, updated_pose
+    
     
     def _sample_poses_in_interval(self, scan_match_pose):  ## RAVI
         '''
@@ -125,43 +130,46 @@ class Particle():
         '''
         scan_match_pose = scan_match_pose.reshape((3,1))
         
-        sample = np.random.random_sample((3,self.sample_size))    #### can allocate different delta's for x,y,theta
-        sample = sample*self.delta
-        sample = sample + scan_match_pose
-
-        
-        return sample
+        samples = np.random.random_sample((3,self.sample_size))    #### can allocate different delta's for x,y,theta
+        samples = samples*self.delta
+        samples = samples + scan_match_pose
+    
+        return samples
         
     
-    def _compute_new_pose(self, t, pose_samples, particle_index):           ##RAVI
+    def _compute_new_pose(self, data_, t, pose_samples):           ##RAVI
         '''
         Computes mean,cov,weight factor from pose_samples
         Samples new_pose from gaussian and appends to trajectory
         Updates weight
         '''
         mean = np.zeros((3,))
-        variance = np.zeros((3,))
+        variance = np.zeros((3,3))
         eta = np.zeros(pose_samples.shape[1])
-        lidar_angles = np.arange(data.lidar_specs_['angle_min'],data.lidar_specs_['angle_max'],data.lidar_specs_['angle_increment'])
-        odom_index = np.argmin(abs(data.odom_['time'] - data.lidar_['time'][t]))
-        odom_index_prev = np.argmin(abs(data.odom_['time'] - data.lidar_['time'][t-1]))
+        
+        odom = data_._odom_at_lidar_idx(t)
+        odom_prev = data_._odom_at_lidar_idx(t-1)
+        scan = data_.lidar_['scan'][t]
+        
+        pose_prev = self.trajectory_[:,-1]
+        
         for i in range(pose_samples.shape[1]):
-            prob_measurement = models.measurement_model(scan, pose_samples[:,i],lidar_angles,occupied_indices)
-            odom_measurement = models.odom_model(best_particle_prev,pose_samples[:,i],odom[odom_index_prev],odom[odom_index])
-            mean += pose_samples[:,i]*prob_measurement*odom_measurement
+            prob_measurement = models.measurement_model(scan, pose_samples[:,i], data_.lidar_angles_, self.occupied_pts_.T)
+            odom_measurement = models.odometry_model(pose_prev, pose_samples[:,i], odom_prev, odom)
             eta[i] = (prob_measurement)*(odom_measurement)
+            mean += pose_samples[:,i]*eta[i]
+            
+        print('Eta: ',np.sum(eta))
         
         mean = mean/np.sum(eta)
-        #sigma = 0
+        mean = np.reshape(mean,(3,1))
         
         for i in range(pose_samples.shape[1]):
-            variance += (pose_samples - mean)@((pose_samples - mean).T)*eta[i]
+            variance += (pose_samples[:,i] - mean)@((pose_samples[:,i] - mean).T)*eta[i]
         
-        variance = variance/np.sum(eta)
-        
-        new_pose = np.random.multivariate_normal(mean, variance)
-        
-        self.weigth[particle_index] = self.weight[particle_index]*np.sum(eta)
+        variance = variance/np.sum(eta)   
+        new_pose = np.random.multivariate_normal(mean.flatten(), variance)       
+        self.weight_ = self.weight_ * np.sum(eta)
         
         return new_pose
         
@@ -180,17 +188,20 @@ class Particle():
         
         for ray_num in range(len(scan)):
             cells_x, cells_y = data_._bresenham2D(r_map_x, r_map_y, map_x[ray_num], map_y[ray_num], self.MAP_)
-            self.log_odds_[cells_x[:-1], cells_y[:-1]] += self.log_p_false
+            self.log_odds_[cells_x[:-1], cells_y[:-1]] += self.log_p_false_
             if obstacle[ray_num]:
-                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_true
+                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_true_
             else:
-                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_false
+                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_false_
         self.occu_ = 1 - (1/ (1 + np.exp(self.log_odds_)))
         self.MAP_['map'] = self.occu_ > self.p_thresh_
         
         self.traj_indices_ = np.append(self.traj_indices_, np.array([[r_map_x],[r_map_y]]), 1)
-    
-    
+        self.trajectory_ = np.append(self.trajectory_, np.reshape(pose,(3,1)), 1)
+        
+        occupied_map = np.where(self.log_odds_ > self.logodd_thresh_)
+        self.occupied_pts_ = data_._map_to_world(occupied_map[0], occupied_map[1], self.MAP_)
+        
     
     
     

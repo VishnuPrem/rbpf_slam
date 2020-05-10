@@ -15,6 +15,9 @@ from rbpf_dataloader import DataLoader
 import matplotlib.pyplot as plt
 import cv2
 import transformations as tf
+import tqdm
+import update_models as models
+import copy
 
 class SLAM():
     
@@ -34,47 +37,72 @@ class SLAM():
         
         
     def _resample(self):
-        pass
-    
-    def _slam_update(self):       
-        for p in self.particles_:
-            pass     
-        if self.Neff_ > self.Neff_thresh_:
-            self._resample()
+        
+        c = self.weights_[0]
+        j = 0
+        u = np.random.uniform(0,1.0/self.num_p_)
+        new_particles = []
+        for k in range(self.num_p_):
+            beta = u + float(k)/self.num_p_
+            while beta > c:
+                j += 1
+                c += self.weights_[j]
+            new_particles.append(copy.deepcopy(self.particles_[j]))
+        
+        self.weights_ = np.ones(self.num_p_)/self.num_p_
+        print('Weights: ', self.weights_)
+        self.particles_ = new_particles
         
     def _run_slam(self, t0, t_end = None):
         '''
             Performs SLAM
         '''
         t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
-                 
+        
         for t in range(t0, t_end):                     
+        # for t in tqdm.tqdm(range(t0, t_end)):                     
             if t == t0:
                 print("----Building first map----")
                 for p in self.particles_:
                     p._build_first_map(self.data_, t)
-                    self._gen_map(p)
+                    # self._gen_map(p)
                 continue
             
-            for p in self.particles_:
+            scan = self.data_.lidar_['scan'][t]
+                
+            for i,p in enumerate(self.particles_):
                 
                 # predict with motion model
-                pred_pose = p._predict(self.data_, t, self.mov_cov_)
+                pred_pose, pred_with_noise = p._predict(self.data_, t, self.mov_cov_)
                 
-                #### REMEAINING STEPS
-                est_pose = pred_pose
-                ####
+                sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_pose)
+                
+                if not sucess:
+                    # use motion model for pose estimate
+                    est_pose = pred_with_noise
+                    p.weight_ = p.weight_ * models.measurement_model(scan, pred_with_noise, self.data_.lidar_angles_, p.occupied_pts_.T)
+                    self.weights_[i] = p.weight_
+                
+                else:
+                    # sample around scan match pose
+                    sample_poses = p._sample_poses_in_interval(scan_match_pose)
+                    est_pose = p._compute_new_pose(self.data_, t, sample_poses)
+                    self.weights_[i] = p.weight_
                 
                 p._update_map(self.data_, t, est_pose)
-                
-        self._gen_map(p)
+            
+            self.Neff = 1/np.linalg.norm(self.weights_)
+            # if self.Neff < self.Neff_thresh_:
+            #     self._resample() 
+
+            self._gen_map(self.particles_[np.argmax(self.weights_)])
     
     
     def _mapping_with_known_poses(self, t0, t_end = None, interval = 1):
         '''
             Uses noiseless odom data to generate entire map
         '''
-        t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
+        t_end = self.data_.lidar_[ b'num_data'] if t_end is None else t_end + 1
         p = self.particles_[0]
         for t in range(t0, t_end, interval):                             
             odom = self.data_._odom_at_lidar_idx(t)  
