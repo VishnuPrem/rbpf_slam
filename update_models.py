@@ -43,6 +43,7 @@ def measurement_model(scan, pose, lidar_angles, occupied_indices):
     
     _, min_dist = match.get_correspondance(occupied_indices,xy)
     print('Min dist: ', max(min_dist))
+    
     exp = (p_hit/(sqrt(2*np.pi)*sigma))*np.exp(-min_dist/(2*sigma**2))
     
     prob = exp + p_random*(1/z_max)

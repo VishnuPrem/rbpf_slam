@@ -109,6 +109,23 @@ def dist_to_xy(scan,angles):
     return xy
     
     
-    
+def update_weights(weights,correlations):
+	"""Return weights based on correlation values"""
+	# update weights
+	log_weights = np.log(weights)
+	# print '--log_weights:', log_weights
+	log_weights += correlations
+	# print '---- add correlations to obtain', log_weights
+	# normalize log_weights
+	max_log_weight = np.max(log_weights)
+	# print '---- max_log_weight:', max_log_weight
+	log_weights = log_weights - max_log_weight - logSumExp(log_weights,max_log_weight)
+	# retreive weight values
+	return np.exp(log_weights)    
+
+def logSumExp(log_weights,max_log_weight):
+	delta_log_weight = np.sum(np.exp(log_weights - max_log_weight))
+	# print '--delta_log_weight:', delta_log_weight
+	return np.log(delta_log_weight)
     
     

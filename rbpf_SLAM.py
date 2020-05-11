@@ -18,6 +18,7 @@ import transformations as tf
 import tqdm
 import update_models as models
 import copy
+import utils
 
 class SLAM():
     
@@ -49,9 +50,69 @@ class SLAM():
                 c += self.weights_[j]
             new_particles.append(copy.deepcopy(self.particles_[j]))
         
-        self.weights_ = np.ones(self.num_p_)/self.num_p_
-        print('Weights: ', self.weights_)
+        self.weights_ = np.ones(self.num_p_)/self.num_p_     
         self.particles_ = new_particles
+     
+    def _run_slam_simple(self, t0, t_end = None):
+        '''
+            Performs SLAM
+        '''
+        t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
+        resample_num = 0
+        Neff_curve = []
+        
+        for t in range(t0, t_end):                     
+        # for t in tqdm.tqdm(range(t0, t_end)):                     
+            if t == t0:
+                print("----Building first map----")
+                for p in self.particles_:
+                    p._build_first_map(self.data_, t)
+                    # self._gen_map(p)
+                continue
+            
+            correlation = np.zeros(self.num_p_)
+            
+            for i,p in enumerate(self.particles_):
+                
+                # predict with motion model
+                pred_pose, pred_with_noise = p._predict(self.data_, t, self.mov_cov_)
+                est_pose = pred_with_noise
+                # sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_with_noise)
+                
+                # if not sucess:
+                #     # use motion model for pose estimate
+                #     est_pose = pred_with_noise
+                # else:
+                #     est_pose = scan_match_pose
+                    
+                correlation[i] = p._get_lidar_map_correspondence(self.data_, t, est_pose)               
+                p._update_map(self.data_, t, est_pose)
+            
+            self.weights_ = utils.update_weights(correlation, self.weights_)             
+            self.Neff_ = 1.0/np.sum(np.dot(self.weights_,self.weights_))
+            
+            print('t: ',t, ' Neff: ',self.Neff_, ' condition: ',self.Neff_thresh_*self.num_p_, 'resamples: ', resample_num)
+            # with np.printoptions(precision=2):
+            #     print(' weight: ', self.weights_)
+            
+            Neff_curve.append(self.Neff_/self.num_p_)
+            
+            if self.Neff_ < self.Neff_thresh_*self.num_p_:
+                resample_num += 1
+                self._resample() 
+            
+            # if t%20 ==0:
+            #     self._gen_map(self.particles_[np.argmax(self.weights_)], t)
+            if t%20 == 0:
+                for i in range(self.num_p_):
+                    self._save_map(self.particles_[i], t, i)
+                plt.plot(Neff_curve)
+                plt.show()
+                
+        
+        plt.plot(Neff_curve)
+        plt.show()
+        
         
     def _run_slam(self, t0, t_end = None):
         '''
@@ -102,7 +163,7 @@ class SLAM():
         '''
             Uses noiseless odom data to generate entire map
         '''
-        t_end = self.data_.lidar_[ b'num_data'] if t_end is None else t_end + 1
+        t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
         p = self.particles_[0]
         for t in range(t0, t_end, interval):                             
             odom = self.data_._odom_at_lidar_idx(t)  
@@ -113,7 +174,7 @@ class SLAM():
         self._gen_map(p)
                 
             
-    def _gen_map(self, particle):
+    def _gen_map(self, particle, t):
         '''
             Generates map for visualization
         '''
@@ -128,7 +189,20 @@ class SLAM():
         unexplored_indices = np.where(abs(log_odds) < 1e-1)
         MAP_2_display[list(unexplored_indices[0]),list(unexplored_indices[1]),:] = [150,150,150]
         MAP_2_display[traj[0],traj[1]] = [70,70,228]
-        plt.imshow(MAP_2_display)
-        plt.show()
-        cv2.imwrite('logs/map.png', MAP_2_display)
+        # plt.imshow(MAP_2_display)
+        # plt.title(str(t))
+        # plt.show()
+        # cv2.imwrite('logs/map.png', MAP_2_display)
         return MAP_2_display
+    
+    def _save_map(self, particle, t, p_num):
+        MAP = self._gen_map(particle, t)
+        file_name = 'logs/t_'+ str(t)+'_p_'+str(p_num)+'.png'
+        cv2.imwrite(file_name, MAP)
+        
+    def _disp_map(self, particle, t, p_num):
+        MAP = self._gen_map(particle, t)
+        plt.imshow(MAP)
+        plt.title(str(t)+"_p: "+str(p_num))
+        plt.show()
+        

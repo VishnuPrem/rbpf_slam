@@ -10,7 +10,7 @@
 
 import numpy as np
 from rbpf_SLAM import SLAM
-
+import matplotlib.pyplot as plt
 
 
 lidar_scan_path = "data/processed_lidar.pkl"
@@ -24,14 +24,16 @@ mov_cov = np.array([[1e-4, 0, 0],
 
 map_resolution = 0.05
 map_dimension = 25
-num_p = 1
+num_p = 30
 p_thresh = 0.5
-Neff_thresh = 0.6
+Neff_thresh = 0.5
 
-t0 = 0
-t_end = 1 # timestep to end SLAM
+t0 = 50
+t_end = None # timestep to end SLAM
 
 slam = SLAM(data_path, mov_cov, num_p, map_resolution, map_dimension, Neff_thresh)
-slam._run_slam(t0, t_end)
+slam._run_slam_simple(t0, t_end)
+best_p_idx = np.argmax(slam.weights_)
+print('Best particle: ', best_p_idx)
 
 # slam._mapping_with_known_poses(t0,t_end)
