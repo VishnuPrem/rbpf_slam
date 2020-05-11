@@ -18,7 +18,7 @@ import scan_matching as matching
 
 class Particle():
     
-    def __init__(self, map_dimension, map_resolution, num_p, delta = 0.05, sample_size = 15):
+    def __init__(self, map_dimension, map_resolution, num_p, delta = 0.05, sample_size = 10):
 
         
         self._init_map(map_dimension, map_resolution)              

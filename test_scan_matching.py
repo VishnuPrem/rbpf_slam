@@ -25,8 +25,7 @@ print(data.lidar_['scan'].shape)
 print(data.odom_['x'].shape)
 print(data.odom_['num_data'])"""
 
-theta_min = data.lidar_specs_['angle_min']
-lidar_angles = np.arange(data.lidar_specs_['angle_min'],data.lidar_specs_['angle_max'],data.lidar_specs_['angle_increment'])
+lidar_angles = data.lidar_angles_
 updated_pos = np.zeros((3,data.lidar_['num_data']))
 Flags = np.zeros((data.lidar_['num_data']))
 Flags[0] = True
@@ -48,10 +47,11 @@ for i in tqdm.tqdm(range(1,data.lidar_['num_data'])):
     curr_scan = data.lidar_['scan'][i]
     
     curr_coordinates = utils.dist_to_xy(curr_scan,lidar_angles)
-    Flags[i], updated_pos[:,i] = matching.Scan_matcher(prev_coordinates, prev_odom, curr_coordinates, curr_odom) 
+    Flags, updated_pos[:,i] = matching.Scan_matcher(curr_coordinates.copy(), curr_odom.copy(), prev_coordinates.copy(), prev_odom.copy()) 
     
     prev_coordinates = curr_coordinates
-    prev_odom = curr_odom
+    #prev_odom = curr_odom
+    prev_odom = updated_pos[:,i]
     
 true_pos = updated_pos[:,Flags.astype('bool')]
 false_pos = updated_pos[:,np.logical_not(Flags.astype("bool"))]    
