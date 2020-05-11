@@ -26,9 +26,9 @@ odom_path = "data/processed_odom.pkl"
 lidar_specs_path = "data/lidar_specs.pkl"
 data_path = [lidar_scan_path, odom_path, lidar_specs_path]
 
-mov_cov = np.array([[1e-5, 0, 0],
-                    [0, 1e-5, 0],
-                    [0, 0 , 1e-5]])
+mov_cov = np.array([[1e-8, 0, 0],
+                    [0, 1e-8, 0],
+                    [0, 0 , 1e-8]])
 
 map_resolution = 0.05
 map_dimension = 25

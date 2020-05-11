@@ -82,11 +82,8 @@ def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.45):
         
 
         
-<<<<<<< HEAD
+
     if curr_error < thresh and curr_error < initial_error:
-=======
-    if curr_error < thresh or curr_error < initial_error:
->>>>>>> scan_match_mapping
         Flag = True
     
     

@@ -22,7 +22,7 @@ import utils
 
 class SLAM():
     
-    def __init__(self, data_path, mov_cov, num_p = 20, map_resolution = 0.05, map_dimension = 20, Neff_thresh = 0.6):
+    def __init__(self, data_path, mov_cov, num_p = 20, map_resolution = 0.05, map_dimension = 20, Neff_thresh = 0.5):
         
         self.num_p_ = num_p
         self.Neff_ = 0
@@ -76,11 +76,23 @@ class SLAM():
                 
                 
                 # predict with motion model
-                pred_pose, pred_with_noise = p._predict(self.data_, t, self.mov_cov_, scan_match_odom, scan_match_flag)
+                Flag,pred_pose, pred_with_noise = p._predict(self.data_, t, self.mov_cov_, scan_match_odom, scan_match_flag)
                 est_pose = pred_with_noise
+                
+                if Flag:
+                    sample_poses = p._sample_poses_in_interval(est_pose)
+                    est_pose = p._compute_new_pose(self.data_, t, sample_poses)
+                    self.weights_[i] = p.weight_
+                    
+                    
+                if not Flag:
+                    p.weight_ = p.weight_ * models.measurement_model(self.data_.lidar_['scan'][t], est_pose, self.data_.lidar_angles_, p.occupied_pts_.T, p.MAP_, self.data_)
+                    self.weights_[i] = p.weight_
+
+                    
                               
-                # noise = np.random.multivariate_normal(np.zeros(3), self.mov_cov_, 1).flatten()
-                # odom = tf.twoDSmartPlus(odom, noise)
+                #noise = np.random.multivariate_normal(np.zeros(3), self.mov_cov_, 1).flatten()
+                #odom = tf.twoDSmartPlus(odom, noise)
                            
                 # sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_pose)
                 # if not flag:
@@ -88,10 +100,10 @@ class SLAM():
                 #     odom, _= p._predict(self.data_, t, self.mov_cov_)
                 # est_pose = odom
                     
-                correlation[i] = p._get_lidar_map_correspondence(self.data_, t, est_pose)               
+                #correlation[i] = p._get_lidar_map_correspondence(self.data_, t, est_pose)               
                 p._update_map(self.data_, t, est_pose)
             
-            self.weights_ = utils.update_weights(correlation, self.weights_)             
+            #self.weights_ = utils.update_weights(correlation, self.weights_)             
             self.Neff_ = 1.0/np.sum(np.dot(self.weights_,self.weights_))
             
         
@@ -108,7 +120,7 @@ class SLAM():
             
             # if t%20 ==0:
             #     self._gen_map(self.particles_[np.argmax(self.weights_)], t)
-            if t%20 == 0:
+            if t%10 == 0:
                 for i in range(self.num_p_):
                     self._save_map(self.particles_[i], t, i)
                 plt.plot(Neff_curve)
@@ -154,7 +166,10 @@ class SLAM():
                     sample_poses = p._sample_poses_in_interval(scan_match_pose)
                     est_pose = p._compute_new_pose(self.data_, t, sample_poses)
                     self.weights_[i] = p.weight_
-                
+
+
+
+
                 p._update_map(self.data_, t, est_pose)
             
             self.Neff = 1/np.linalg.norm(self.weights_)

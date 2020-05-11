@@ -18,11 +18,11 @@ import scan_matching as matching
 
 class Particle():
     
-    def __init__(self, map_dimension, map_resolution, num_p, delta = 0.05, sample_size = 10):
+    def __init__(self, map_dimension, map_resolution, num_p, delta = 0.005, sample_size = 10):
 
         
         self._init_map(map_dimension, map_resolution)              
-        # self.weight_ = 1/num_p #inital value???
+        self.weight_ = 1/num_p #inital value???
         self.weight_factor_ = None
         self.delta = delta
         self.sample_size = sample_size
@@ -80,7 +80,7 @@ class Particle():
         self.traj_indices_[0], self.traj_indices_[1] = r_map_x, r_map_y
         
         occupied_map = np.where(self.log_odds_ > self.logodd_thresh_)
-        self.occupied_pts_ = data_._map_to_world(occupied_map[0], occupied_map[1], self.MAP_)
+        self.occupied_pts_ = np.vstack((occupied_map[0], occupied_map[1]))
         
         # plt.imshow(self.MAP_['map'])
         # plt.show()
@@ -107,7 +107,7 @@ class Particle():
         pred_pose = tf.twoDSmartPlus(old_pose, odom_diff)
         pred_with_noise = tf.twoDSmartPlus(pred_pose, noise)
         
-        return pred_pose, pred_with_noise
+        return scan_flag[t],pred_pose, pred_with_noise
         
     
     def _scan_matching(self, data_, t , pred_odom):
@@ -127,7 +127,7 @@ class Particle():
         return flag, updated_pose
     
     
-    def _sample_poses_in_interval(self, scan_match_pose):  ## RAVI
+    def _sample_poses_in_interval(self, scan_match_pose):
         '''
         scan matched pose: (3,1)
         
@@ -136,13 +136,13 @@ class Particle():
         scan_match_pose = scan_match_pose.reshape((3,1))
         
         samples = np.random.random_sample((3,self.sample_size))    #### can allocate different delta's for x,y,theta
-        samples = samples*self.delta
+        samples = 2*samples*self.delta - self.delta
         samples = samples + scan_match_pose
     
         return samples
         
     
-    def _compute_new_pose(self, data_, t, pose_samples):           ##RAVI
+    def _compute_new_pose(self, data_, t, pose_samples):
         '''
         Computes mean,cov,weight factor from pose_samples
         Samples new_pose from gaussian and appends to trajectory
@@ -159,7 +159,7 @@ class Particle():
         pose_prev = self.trajectory_[:,-1]
         
         for i in range(pose_samples.shape[1]):
-            prob_measurement = models.measurement_model(scan, pose_samples[:,i], data_.lidar_angles_, self.occupied_pts_.T)
+            prob_measurement = models.measurement_model(scan, pose_samples[:,i], data_.lidar_angles_, self.occupied_pts_.T,self.MAP_,data_)
             odom_measurement = models.odometry_model(pose_prev, pose_samples[:,i], odom_prev, odom)
             eta[i] = (prob_measurement)*(odom_measurement)
             mean += pose_samples[:,i]*eta[i]
@@ -206,11 +206,12 @@ class Particle():
         
         for ray_num in range(len(scan)):
             cells_x, cells_y = data_._bresenham2D(r_map_x, r_map_y, map_x[ray_num], map_y[ray_num], self.MAP_)
-            self.log_odds_[cells_x[:-1], cells_y[:-1]] += self.log_p_false_
-            if obstacle[ray_num]:
-                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_true_
-            else:
-                self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_false_
+            if cells_x.shape[0] > 0:
+                self.log_odds_[cells_x[:-1], cells_y[:-1]] += self.log_p_false_
+                if obstacle[ray_num]:
+                    self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_true_
+                else:
+                    self.log_odds_[cells_x[-1], cells_y[-1]] += self.log_p_false_
         self.occu_ = 1 - (1/ (1 + np.exp(self.log_odds_)))
         self.MAP_['map'] = self.occu_ > self.p_thresh_
         
@@ -218,7 +219,7 @@ class Particle():
         self.trajectory_ = np.append(self.trajectory_, np.reshape(pose,(3,1)), 1)
         
         occupied_map = np.where(self.log_odds_ > self.logodd_thresh_)
-        self.occupied_pts_ = data_._map_to_world(occupied_map[0], occupied_map[1], self.MAP_)
+        self.occupied_pts_ = np.vstack((occupied_map[0], occupied_map[1]))
         
     
     
