@@ -53,7 +53,7 @@ class SLAM():
         self.weights_ = np.ones(self.num_p_)/self.num_p_     
         self.particles_ = new_particles
      
-    def _run_slam_simple(self, t0, t_end = None):
+    def _run_slam_simple(self, scan_match_odom, scan_match_flag, t0, t_end = None):
         '''
             Performs SLAM
         '''
@@ -74,16 +74,19 @@ class SLAM():
             
             for i,p in enumerate(self.particles_):
                 
-                # predict with motion model
-                pred_pose, pred_with_noise = p._predict(self.data_, t, self.mov_cov_)
-                est_pose = pred_with_noise
                 
-                sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_with_noise)
-                if not sucess:
-                    # use motion model for pose estimate
-                    est_pose = pred_with_noise
-                else:
-                    est_pose = scan_match_pose
+                # predict with motion model
+                pred_pose, pred_with_noise = p._predict(self.data_, t, self.mov_cov_, scan_match_odom, scan_match_flag)
+                est_pose = pred_with_noise
+                              
+                # noise = np.random.multivariate_normal(np.zeros(3), self.mov_cov_, 1).flatten()
+                # odom = tf.twoDSmartPlus(odom, noise)
+                           
+                # sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_pose)
+                # if not flag:
+                #     # use motion model for pose estimate
+                #     odom, _= p._predict(self.data_, t, self.mov_cov_)
+                # est_pose = odom
                     
                 correlation[i] = p._get_lidar_map_correspondence(self.data_, t, est_pose)               
                 p._update_map(self.data_, t, est_pose)
@@ -161,19 +164,27 @@ class SLAM():
             self._gen_map(self.particles_[np.argmax(self.weights_)])
     
     
-    def _mapping_with_known_poses(self, t0, t_end = None, interval = 1):
+    def _mapping_with_known_poses(self, scan_match_odom, scan_match_flag, t0, t_end = None, interval = 1):
         '''
             Uses noiseless odom data to generate entire map
         '''
         t_end = self.data_.lidar_['num_data'] if t_end is None else t_end + 1
         p = self.particles_[0]
-        for t in range(t0, t_end, interval):                             
-            odom = self.data_._odom_at_lidar_idx(t)  
+        
+        for t in range(t0, t_end, interval):     
+                        
+            odom = scan_match_odom[:,t]
+            flag = scan_match_flag[t]
+            if not flag:
+                odom, _ = p._predict(self.data_, t, self.mov_cov_)
+                
             p._update_map(self.data_, t, odom)
+            
             if t%50==0:
-                self._gen_map(p)
-            print(t)                
-        self._gen_map(p)
+                self._disp_map(p, t)
+            print(t)           
+            
+        self._save_map(p, t, 0)
                 
             
     def _gen_map(self, particle, t):
@@ -202,7 +213,7 @@ class SLAM():
         file_name = 'logs/New folder/t_'+ str(t)+'_p_'+str(p_num)+'.png'
         cv2.imwrite(file_name, MAP)
         
-    def _disp_map(self, particle, t, p_num):
+    def _disp_map(self, particle, t, p_num = 0):
         MAP = self._gen_map(particle, t)
         plt.imshow(MAP)
         plt.title(str(t)+"_p: "+str(p_num))

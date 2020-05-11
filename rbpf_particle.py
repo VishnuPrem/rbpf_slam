@@ -87,15 +87,20 @@ class Particle():
         # plt.imshow(self.occu_)
         # plt.show()   
         
-    def _predict(self, data_, t, mov_cov):
+    def _predict(self, data_, t, mov_cov, scan_odom, scan_flag):
         '''
         Applies motion model on last pose in 'trajectory'
         Returns predicted pose
         '''
         old_pose = self.trajectory_[:,-1]      
         
-        old_odom = data_._odom_at_lidar_idx(t-1)
-        new_odom = data_._odom_at_lidar_idx(t)     
+        if scan_flag[t-1] and scan_flag[t]:
+            old_odom = scan_odom[:,t-1]
+            new_odom = scan_odom[:,t]
+        else:
+            old_odom = data_._odom_at_lidar_idx(t-1)
+            new_odom = data_._odom_at_lidar_idx(t)    
+            
         odom_diff = tf.twoDSmartMinus(new_odom, old_odom)     
         noise = np.random.multivariate_normal(np.zeros(3), mov_cov, 1).flatten()
         
