@@ -77,13 +77,13 @@ class SLAM():
                 # predict with motion model
                 pred_pose, pred_with_noise = p._predict(self.data_, t, self.mov_cov_)
                 est_pose = pred_with_noise
-                # sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_with_noise)
                 
-                # if not sucess:
-                #     # use motion model for pose estimate
-                #     est_pose = pred_with_noise
-                # else:
-                #     est_pose = scan_match_pose
+                sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_with_noise)
+                if not sucess:
+                    # use motion model for pose estimate
+                    est_pose = pred_with_noise
+                else:
+                    est_pose = scan_match_pose
                     
                 correlation[i] = p._get_lidar_map_correspondence(self.data_, t, est_pose)               
                 p._update_map(self.data_, t, est_pose)
@@ -91,7 +91,9 @@ class SLAM():
             self.weights_ = utils.update_weights(correlation, self.weights_)             
             self.Neff_ = 1.0/np.sum(np.dot(self.weights_,self.weights_))
             
-            print('t: ',t, ' Neff: ',self.Neff_, ' condition: ',self.Neff_thresh_*self.num_p_, 'resamples: ', resample_num)
+        
+            print('t: ',t, ' Neff: ',self.Neff_, ' condition: ',self.Neff_thresh_*self.num_p_,\
+                      'resamples: ', resample_num)
             # with np.printoptions(precision=2):
             #     print(' weight: ', self.weights_)
             
@@ -197,7 +199,7 @@ class SLAM():
     
     def _save_map(self, particle, t, p_num):
         MAP = self._gen_map(particle, t)
-        file_name = 'logs/t_'+ str(t)+'_p_'+str(p_num)+'.png'
+        file_name = 'logs/New folder/t_'+ str(t)+'_p_'+str(p_num)+'.png'
         cv2.imwrite(file_name, MAP)
         
     def _disp_map(self, particle, t, p_num):

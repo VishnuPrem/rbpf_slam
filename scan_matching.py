@@ -52,6 +52,7 @@ def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.45):
     #print('correspondance:',Correspondance)
     
     curr_error = cal_error(curr_scan,trans_scan,Correspondance)
+    initial_error = curr_error.copy()
     
     prev_error = 1e8
 
@@ -81,7 +82,7 @@ def Scan_matcher(prev_scan, prev_pose, curr_scan, curr_best_pose,thresh = 0.45):
         
 
         
-    if curr_error < thresh:
+    if curr_error < thresh or curr_error < initial_error:
         Flag = True
     
     
