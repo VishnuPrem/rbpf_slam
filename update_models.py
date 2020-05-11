@@ -52,6 +52,7 @@ def measurement_model(scan, pose, lidar_angles, occupied_indices):
                 normalizer[i] += (1/(sqrt(2*np.pi)*sigma))*np.exp(-min_dist/(2*sigma**2))'''
     
     _, min_dist = match.get_correspondance(occupied_indices,xy)
+<<<<<<< HEAD
     #print('Min dist: ', np.sum(min_dist))
     #print(normalizer)
     #print(np.where(normalizer == 0.0))
@@ -61,6 +62,11 @@ def measurement_model(scan, pose, lidar_angles, occupied_indices):
     exp = (p_hit)*np.exp(-min_dist/(2*sigma**2))
     #print(np.where(normalizer == 0))
     #print(exp[np.where(normalizer == 0.0)[0]])
+=======
+    print('Min dist: ', max(min_dist))
+    
+    exp = (p_hit/(sqrt(2*np.pi)*sigma))*np.exp(-min_dist/(2*sigma**2))
+>>>>>>> scan_match_mapping
     
     #exp = exp/normalizer[:,0]
     #print('updated exp:',exp)
