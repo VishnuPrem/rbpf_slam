@@ -37,6 +37,7 @@ prev_odom[1] = data.odom_['y'][odom_index]
 prev_odom[2] = data.odom_['theta'][odom_index]
 prev_scan = data.lidar_['scan'][0]
 prev_coordinates = utils.dist_to_xy(prev_scan,lidar_angles)
+updated_pos[:,0] = prev_odom
 
 for i in tqdm.tqdm(range(1,data.lidar_['num_data'])):
     odom_index = np.argmin(abs(data.odom_['time'] - data.lidar_['time'][i]))
@@ -47,7 +48,7 @@ for i in tqdm.tqdm(range(1,data.lidar_['num_data'])):
     curr_scan = data.lidar_['scan'][i]
     
     curr_coordinates = utils.dist_to_xy(curr_scan,lidar_angles)
-    Flags, updated_pos[:,i] = matching.Scan_matcher(curr_coordinates.copy(), curr_odom.copy(), prev_coordinates.copy(), prev_odom.copy()) 
+    Flags[i], updated_pos[:,i] = matching.Scan_matcher(curr_coordinates.copy(), curr_odom.copy(), prev_coordinates.copy(), prev_odom.copy()) 
     
     prev_coordinates = curr_coordinates
     #prev_odom = curr_odom
