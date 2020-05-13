@@ -89,28 +89,15 @@ class SLAM():
                     p.weight_ = p.weight_ * models.measurement_model(self.data_.lidar_['scan'][t], est_pose, self.data_.lidar_angles_, p.occupied_pts_.T, p.MAP_, self.data_)
                     self.weights_[i] = p.weight_
 
-                    
-                              
-                #noise = np.random.multivariate_normal(np.zeros(3), self.mov_cov_, 1).flatten()
-                #odom = tf.twoDSmartPlus(odom, noise)
-                           
-                # sucess, scan_match_pose =  p._scan_matching(self.data_, t , pred_pose)
-                # if not flag:
-                #     # use motion model for pose estimate
-                #     odom, _= p._predict(self.data_, t, self.mov_cov_)
-                # est_pose = odom
-                    
-                #correlation[i] = p._get_lidar_map_correspondence(self.data_, t, est_pose)               
+                                 
                 p._update_map(self.data_, t, est_pose)
-            
-            #self.weights_ = utils.update_weights(correlation, self.weights_)             
+                        
             self.Neff_ = 1.0/np.sum(np.dot(self.weights_,self.weights_))
             
         
             print('t: ',t, ' Neff: ',self.Neff_, ' condition: ',self.Neff_thresh_*self.num_p_,\
                       'resamples: ', resample_num)
-            # with np.printoptions(precision=2):
-            #     print(' weight: ', self.weights_)
+
             
             Neff_curve.append(self.Neff_/self.num_p_)
             
@@ -118,9 +105,8 @@ class SLAM():
                 resample_num += 1
                 self._resample() 
             
-            # if t%20 ==0:
-            #     self._gen_map(self.particles_[np.argmax(self.weights_)], t)
-            if t%10 == 0:
+ 
+            if t%100 == 0:
                 for i in range(self.num_p_):
                     self._save_map(self.particles_[i], t, i)
                 plt.plot(Neff_curve)
@@ -173,8 +159,8 @@ class SLAM():
                 p._update_map(self.data_, t, est_pose)
             
             self.Neff = 1/np.linalg.norm(self.weights_)
-            # if self.Neff < self.Neff_thresh_:
-            #     self._resample() 
+            if self.Neff < self.Neff_thresh_:
+                self._resample() 
 
             self._gen_map(self.particles_[np.argmax(self.weights_)])
     
