@@ -115,8 +115,8 @@ class Particle():
         Performs scan matching and returns (true,scan matched pose) or (false,None)
         '''
         
-        curr_scan = data_.lidar_['scan'][t]
-        prev_scan = data_.lidar_['scan'][t-1]
+        curr_scan =  data_.lidar_['scan'][t] - data_.lidar_['scan'][0]
+        prev_scan = data_.lidar_['scan'][t-1] - data_.lidar_['scan'][0]
         
         curr_coordinates = utils.dist_to_xy(curr_scan, data_.lidar_angles_)
         curr_odom = pred_odom
