@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun May 10 17:47:57 2020
-
-@author: ravit
-"""
-
-
 import update_models as models
 import rbpf_dataloader as data_loader
 import numpy as np

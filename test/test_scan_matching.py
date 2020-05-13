@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Apr 25 23:44:27 2020
-
-@author: ravit
-"""
-
-
 import rbpf_dataloader as data_loader
 import scan_matching as matching
 import numpy as np

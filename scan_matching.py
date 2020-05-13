@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 20 01:29:24 2020
-
-@author: ravit
-"""
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 import utils 

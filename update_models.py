@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu May  7 00:53:36 2020
-
-@author: ravit
-"""
-
-
 import numpy as np
 import utils as utils
 import scan_matching as match

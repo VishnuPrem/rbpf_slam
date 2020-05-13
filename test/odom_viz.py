@@ -1,14 +1,3 @@
- # -*- coding: utf-8 -*-
-'''
-Created on Sat Apr 25 21:48:04 2020
-
-@author: Vishnu Prem
-
-
- Script to vizualise the lidar scan and odometry data
- 
-'''
-
 from rbpf_dataloader import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
