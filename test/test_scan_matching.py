@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 import tqdm
 
 
-lidar_scan_path = "data\processed_lidar.pkl"
-odom_path = "data\processed_odom.pkl"
+lidar_scan_path = "data\willow1\processed_lidar.pkl"
+odom_path = "data\willow1\processed_odom.pkl"
 lidar_specs_path = "data\lidar_specs.pkl"
 data = data_loader.DataLoader(lidar_scan_path,odom_path,lidar_specs_path)
 
@@ -56,9 +56,14 @@ for i in tqdm.tqdm(range(1,data.lidar_['num_data'])):
     
 true_pos = updated_pos[:,Flags.astype('bool')]
 false_pos = updated_pos[:,np.logical_not(Flags.astype("bool"))]    
-plt.plot(data.odom_['x'], data.odom_['y'])
-plt.plot(updated_pos[0,:],updated_pos[1,:])
+#plt.plot(data.odom_['x'], data.odom_['y'])
+#plt.plot(updated_pos[0,:],updated_pos[1,:])
 #plt.scatter(true_pos[0,:], true_pos[1,:],color = 'green',s = 0.5)
-plt.scatter(false_pos[0,:], false_pos[1,:],color = 'red',s = 2)
+#plt.scatter(false_pos[0,:], false_pos[1,:],color = 'red',s = 2)
+#plt.show()
+#print(np.sum(Flags))
+plt.plot(np.abs(data.odom_['x']-updated_pos[0,:]),label = 'error in x')
+plt.plot(np.abs(data.odom_['y']-updated_pos[1,:]),label = 'error in y')
+plt.plot(np.abs(data.odom_['theta']-updated_pos[2,:]),label = 'error in theta')
+plt.legend()
 plt.show()
-print(np.sum(Flags))
